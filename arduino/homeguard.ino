@@ -36,7 +36,7 @@ uint8_t sync_to_server(){
     }
 
     states=1;
-    
+
     char buffer[128] = "";
     strcat(buffer, "GET ");
     strcat(buffer, PATH_1);
@@ -92,105 +92,6 @@ uint8_t sync_to_server(){
 }
 
 
-
-    void UpdateStates(){
-        digitalWrite(ST_CP, LOW);
-        shiftOut(DS, SH_CP, MSBFIRST, ~states);
-        digitalWrite(ST_CP, HIGH);
-        EEPROM.write(0, states);
-    }
-
-    void WiFi_SendStates(uint8_t mux_id){
-        uint8_t len = 9;
-        char *buffer = (char*)malloc(len);
-
-        buffer[0] = 'R';
-        for(uint32_t id = 0; id < 8; id++){
-            buffer[1+id] = '0' + ((states>>id) & 1);
-        }
-
-        if(wifi.send(mux_id, (const uint8_t*)buffer, len)) {
-            for(uint32_t i = 0; i < len; i++) {
-                DEBUG((char)buffer[i]);
-            }
-            DEBUG("send back ok\r\n");
-        } else {
-            DEBUG("send back err\r\n");
-        }
-    }
-
-
-    uint32_t WiFi_SendHtmlBack(uint8_t mux_id){
-        char* buffer =
-            "HTTP/1.1 200 OK\n"
-            "content-type: text/html\n"
-            "server: homeguard\n\n"
-            "asdf\n"
-            ;
-
-        uint8_t len = strlen(buffer);
-
-        sendback:
-
-        if(wifi.send(mux_id, (const uint8_t*)buffer, len)) {
-            DEBUG("SENDING BACK: [[\n");
-            for(uint32_t i = 0; i < len; i++) {
-                DEBUG((char)buffer[i]);
-            }
-            DEBUG("\n]]\n");
-        } else {
-            DEBUG("send back err\r\n");
-            goto sendback;
-        }
-
-        return 0;
-    }
-    uint32_t WiFi_Recive(){
-        const char buffer[128] = {0};
-        uint8_t mux_id;
-        DEBUG("Recving:\n");
-        uint32_t len = wifi.recv(&mux_id, (uint8_t*)buffer, sizeof(buffer), 100);
-        // skip if there is no data
-        if(0 == len) return 0;
-
-        char *str;
-        str = strchr(buffer,' ') + 1;
-
-
-        //if("GET /"
-        //'GET /? '
-        //'GET /favicon.ico '
-        //'GET /?asdasdfasdfasdasdf '
-        //if("GET"
-        //GET /favicon.ico HTTP/1.1
-
-        DEBUG("RECIVED REQUEST: [[\n");
-        for(uint32_t i = 0; i < len; i++) {
-            DEBUG((char)buffer[i]);
-        }
-        DEBUG("\n]]\n");
-
-        WiFi_SendHtmlBack(mux_id);
-
-
-
-
-
-        if (wifi.releaseTCP(mux_id)) {
-            DEBUG("release tcp ");
-            DEBUG(mux_id);
-            DEBUGln(" ok");
-        } else {
-            DEBUG("release tcp");
-            DEBUG(mux_id);
-            DEBUGln(" err");
-        }
-
-        DEBUG("Status:[");
-        DEBUG(wifi.getIPStatus().c_str());
-        DEBUGln("]");
-        return 1;
-    }
 
 // WIFI_SETUP : 
     #define DEBUGOK(string, operation) \
