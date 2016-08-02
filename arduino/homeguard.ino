@@ -1,14 +1,12 @@
+//#include <stdlib.h>
 #include "ESP8266.h"
 #include <EEPROM.h>
-//#include <stdlib.h>
-#define SSID        "054"
-#define PASSWORD    "88647410"
+#define SPOTNAME "054"
+#define PASSWORD "88647410"
 
-#define ST_CP  7
-#define SH_CP  8
-#define DS    12
-
-//#define DEBUG 1
+#define ST_CP 7
+#define SH_CP 8
+#define DS 12
 
 #define DEBUG Serial.print
 #define DEBUGln Serial.println
@@ -37,6 +35,8 @@ uint8_t sync_to_server(){
         DEBUG("FAIL\n");
     }
 
+    states=1;
+    
     char buffer[128] = "";
     strcat(buffer, "GET ");
     strcat(buffer, PATH_1);
@@ -44,7 +44,8 @@ uint8_t sync_to_server(){
     strcat(buffer, "&version=2016-08-01");
     strcat(buffer, "&data_states=");
     char numbuf[12];
-    strcat(buffer, itoa(states, numbuf, 10));
+    itoa(states, numbuf, 10)
+    strcat(buffer, numbuf);
     strcat(buffer, "&data_states=");
     
     strcat(buffer, " HTTP/1.1\n");
@@ -58,7 +59,7 @@ uint8_t sync_to_server(){
         DEBUG((char)buffer[i]);
     }
     DEBUG("\n]]\n");
-    wifi.send(mux_id, (const uint8_t*)buffer, len)
+    wifi.send(mux_id, (const uint8_t*)buffer, len);
 
 
 
@@ -92,128 +93,130 @@ uint8_t sync_to_server(){
 
 
 
-void UpdateStates(){
-    digitalWrite(ST_CP, LOW);
-    shiftOut(DS, SH_CP, MSBFIRST, ~states);
-    digitalWrite(ST_CP, HIGH);
-    EEPROM.write(0, states);
-}
-
-void WiFi_SendStates(uint8_t mux_id){
-    uint8_t len = 9;
-    char *buffer = (char*)malloc(len);
-
-    buffer[0] = 'R';
-    for(uint32_t id = 0; id < 8; id++){
-        buffer[1+id] = '0' + ((states>>id) & 1);
+    void UpdateStates(){
+        digitalWrite(ST_CP, LOW);
+        shiftOut(DS, SH_CP, MSBFIRST, ~states);
+        digitalWrite(ST_CP, HIGH);
+        EEPROM.write(0, states);
     }
 
-    if(wifi.send(mux_id, (const uint8_t*)buffer, len)) {
-        for(uint32_t i = 0; i < len; i++) {
-            DEBUG((char)buffer[i]);
+    void WiFi_SendStates(uint8_t mux_id){
+        uint8_t len = 9;
+        char *buffer = (char*)malloc(len);
+
+        buffer[0] = 'R';
+        for(uint32_t id = 0; id < 8; id++){
+            buffer[1+id] = '0' + ((states>>id) & 1);
         }
-        DEBUG("send back ok\r\n");
-    } else {
-        DEBUG("send back err\r\n");
+
+        if(wifi.send(mux_id, (const uint8_t*)buffer, len)) {
+            for(uint32_t i = 0; i < len; i++) {
+                DEBUG((char)buffer[i]);
+            }
+            DEBUG("send back ok\r\n");
+        } else {
+            DEBUG("send back err\r\n");
+        }
     }
-}
-uint32_t WiFi_SendHtmlBack(uint8_t mux_id){
-    char* buffer =
-        "HTTP/1.1 200 OK\n"
-        "content-type: text/html\n"
-        "server: homeguard\n\n"
-        "asdf\n"
-        ;
 
-    uint8_t len = strlen(buffer);
 
-sendback:
+    uint32_t WiFi_SendHtmlBack(uint8_t mux_id){
+        char* buffer =
+            "HTTP/1.1 200 OK\n"
+            "content-type: text/html\n"
+            "server: homeguard\n\n"
+            "asdf\n"
+            ;
 
-    if(wifi.send(mux_id, (const uint8_t*)buffer, len)) {
-        DEBUG("SENDING BACK: [[\n");
+        uint8_t len = strlen(buffer);
+
+        sendback:
+
+        if(wifi.send(mux_id, (const uint8_t*)buffer, len)) {
+            DEBUG("SENDING BACK: [[\n");
+            for(uint32_t i = 0; i < len; i++) {
+                DEBUG((char)buffer[i]);
+            }
+            DEBUG("\n]]\n");
+        } else {
+            DEBUG("send back err\r\n");
+            goto sendback;
+        }
+
+        return 0;
+    }
+    uint32_t WiFi_Recive(){
+        const char buffer[128] = {0};
+        uint8_t mux_id;
+        DEBUG("Recving:\n");
+        uint32_t len = wifi.recv(&mux_id, (uint8_t*)buffer, sizeof(buffer), 100);
+        // skip if there is no data
+        if(0 == len) return 0;
+
+        char *str;
+        str = strchr(buffer,' ') + 1;
+
+
+        //if("GET /"
+        //'GET /? '
+        //'GET /favicon.ico '
+        //'GET /?asdasdfasdfasdasdf '
+        //if("GET"
+        //GET /favicon.ico HTTP/1.1
+
+        DEBUG("RECIVED REQUEST: [[\n");
         for(uint32_t i = 0; i < len; i++) {
             DEBUG((char)buffer[i]);
         }
         DEBUG("\n]]\n");
-    } else {
-        DEBUG("send back err\r\n");
-        goto sendback;
+
+        WiFi_SendHtmlBack(mux_id);
+
+
+
+
+
+        if (wifi.releaseTCP(mux_id)) {
+            DEBUG("release tcp ");
+            DEBUG(mux_id);
+            DEBUGln(" ok");
+        } else {
+            DEBUG("release tcp");
+            DEBUG(mux_id);
+            DEBUGln(" err");
+        }
+
+        DEBUG("Status:[");
+        DEBUG(wifi.getIPStatus().c_str());
+        DEBUGln("]");
+        return 1;
     }
 
-    return 0;
-}
-uint32_t WiFi_Recive(){
-    const char buffer[128] = {0};
-    uint8_t mux_id;
-    DEBUG("Recving:\n");
-    uint32_t len = wifi.recv(&mux_id, (uint8_t*)buffer, sizeof(buffer), 100);
-    // skip if there is no data
-    if(0 == len) return 0;
+// WIFI_SETUP : 
+    #define DEBUGOK(string, operation) \
+        DEBUG(string);                 \
+        if (operation) {               \
+            DEBUG("OK\n");             \
+        } else {                       \
+            DEBUG("FAIL\n");           \
+            return 0;                  \
+        }
+    uint8_t WiFi_Setup(){
+        DEBUG(  "Setup begin =================== ====\n");
 
-    char *str;
-    str = strchr(buffer,' ') + 1;
+        DEBUG("FW Version:");
+        DEBUGln(wifi.getVersion().c_str());
+        DEBUGOK("To station + softap ----------- ", wifi.setOprToStationSoftAP());
 
+        DEBUGOK("Join AP ----------------------- ", wifi.joinAP(SPOTNAME, PASSWORD));
+        DEBUG(  "IP: "); DEBUGln(wifi.getLocalIP().c_str());    
+        DEBUGOK("Enable multiple --------------- ", wifi.enableMUX());
+        DEBUGOK("Start TCP Server (8090) ------- ", wifi.startTCPServer(8090));
+        DEBUGOK("Set TCP Timeout (10) seconds -- ", wifi.setTCPServerTimeout(10));
 
-    //if("GET /"
-    //'GET /? '
-    //'GET /favicon.ico '
-    //'GET /?asdasdfasdfasdasdf '
-    //if("GET"
-    //GET /favicon.ico HTTP/1.1
-
-    DEBUG("RECIVED REQUEST: [[\n");
-    for(uint32_t i = 0; i < len; i++) {
-        DEBUG((char)buffer[i]);
+        DEBUG(  "Setup end ===================== ====\n");
+        return 1;
     }
-    DEBUG("\n]]\n");
-
-    WiFi_SendHtmlBack(mux_id);
-
-
-
-
-
-    if (wifi.releaseTCP(mux_id)) {
-        DEBUG("release tcp ");
-        DEBUG(mux_id);
-        DEBUGln(" ok");
-    } else {
-        DEBUG("release tcp");
-        DEBUG(mux_id);
-        DEBUGln(" err");
-    }
-
-    DEBUG("Status:[");
-    DEBUG(wifi.getIPStatus().c_str());
-    DEBUGln("]");
-    return 1;
-}
-
-#define DEBUGOK(string, operation) \
-    DEBUG(string);                 \
-    if (operation) {               \
-        DEBUG("OK\n");             \
-    } else {                       \
-        DEBUG("FAIL\n");           \
-        return 0;                  \
-    }
-uint8_t WiFi_Setup(){
-
-    DEBUG(  "Setup begin =================== ====\n");
-
-    DEBUG("FW Version:");
-    DEBUGln(wifi.getVersion().c_str());
-    DEBUGOK("To station + softap ----------- ", wifi.setOprToStationSoftAP());
-
-    DEBUGOK("Join AP ----------------------- ", wifi.joinAP(SSID, PASSWORD));
-    DEBUG(  "IP: "); DEBUGln(wifi.getLocalIP().c_str());    
-    DEBUGOK("Enable multiple --------------- ", wifi.enableMUX());
-    DEBUGOK("Start TCP Server (8090) ------- ", wifi.startTCPServer(8090));
-    DEBUGOK("Set TCP Timeout (10) seconds -- ", wifi.setTCPServerTimeout(10));
-
-    DEBUG(  "Setup end ===================== ====\n");
-    return 1;
-}
 
 void setup(void)
 {
@@ -255,22 +258,21 @@ void setup(void)
 
 void loop(void)
 {
-
     sync_to_server();
 
 
-    if(digitalRead(11)){
-        EEPROM.write(0, 0);
+    // if(digitalRead(11)){
+    //     EEPROM.write(0, 0);
 
-        // 继电器状态
+    //     // 继电器状态
 
-        states = EEPROM.read(0);
-        digitalWrite(ST_CP, LOW);
-        shiftOut(DS, SH_CP, MSBFIRST, ~states);
-        digitalWrite(ST_CP, HIGH);
+    //     states = EEPROM.read(0);
+    //     digitalWrite(ST_CP, LOW);
+    //     shiftOut(DS, SH_CP, MSBFIRST, ~states);
+    //     digitalWrite(ST_CP, HIGH);
 
-        //digitalWrite(A0, HIGH);
-    }
+    //     //digitalWrite(A0, HIGH);
+    // }
 
     digitalWrite(13, HIGH);
     delay(20);

@@ -1,13 +1,7 @@
 <?php
-$mysqli = mysqli_connect("127.0.0.1", "root", "root", "homeguard");
+require("function.php");
 
-if (!$mysqli) {
-    echo "Error: Unable to connect to MySQL." . PHP_EOL;
-    echo "Debugging errno: " . mysqli_connect_errno() . PHP_EOL;
-    echo "Debugging error: " . mysqli_connect_error() . PHP_EOL;
-    exit;
-}
-$mysqli->set_charset("utf8");
+
 /* Create table doesn't return a resultset */
 
 $sql = "CREATE TABLE IF NOT EXISTS homeguard(
@@ -133,6 +127,10 @@ switch($action){
     case "sync":
         switch($version){
             case "2016-08-01":
+                $states = isset($数据["data_states"]) ? $数据["data_states"] : 0;
+                $states >
+                break;
+            default:
                 break;
         }
         //$_GET["data"]
@@ -208,49 +206,12 @@ switch($action){
         $展示["客厅-正门卫士-门框气温-COLORMARK"]       = "red";
         $展示["客厅-正门卫士-门框磁力感应"]             = "无数据";
         $展示["客厅-阳台门卫士-COLORMARK"]              = "red";
+
+
 ?>
 
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-
-    <!--Import Google Icon Font-->
-    <!--<link rel="stylesheet" href="css/fonts-material-icons.css">-->
-    <link rel="stylesheet" href="http://fonts.googleapis.com/icon?family=Material+Icons">
-
-    <!--<link rel="stylesheet" href="css/materialize.min.css">-->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.7/css/materialize.min.css">
-
-
-
-    <!--Let browser know website is optimized for mobile-->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-
-    <style>
-        *{font-family: "Microsoft YaHei"}
-    </style>
-</head>
-
-<body style="background: #fcfcfc;">
-<!--Import jQuery before materialize.js-->
-<!--<script src="js/jquery-2.1.1.min.js"></script>-->
-<script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
-
-<!-- Compiled and minified JavaScript -->
-<!--<script src="js/materialize.min.js"></script>-->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.7/js/materialize.min.js"></script>
-
-<header>
-    <div class="contain">
-        <nav>
-            <div class="nav-wrapper cyan lighten-1">
-                <a href="#" class="brand-logo center"><i class="material-icons left">cloud</i>雪星 - 家园卫士<i class="material-icons right">cloud</i></a>
-            </div>
-        </nav>
-    </div>
-</header>
-<div class="container" style="">
+<? include("header.php"); ?>
+<div class="container">
     <form id="mainform" method="post" action="?action=post">
         <!-- <input type="submit" name="submit" class="btn" value="提交"> -->
         <h2 class="card-title center">书房 · 卧室</h2>
@@ -445,9 +406,8 @@ switch($action){
         </div>
     </form>
 </div>
-</body>
-</html>
 <?php
+    include("footer.php");
     break;
 }
 ?>
