@@ -1,127 +1,15 @@
 <?php
-require("function.php");
 
 
-/* Create table doesn't return a resultset */
-
-$sql = "CREATE TABLE IF NOT EXISTS homeguard(
-    `id`         int unsigned auto_increment,
-    `pid`                       int unsigned,
-    `t_update`                      datetime,
-    `data-name`                     char(32),
-    `int32`                     int unsigned,
-     primary key (id)
-) character set = utf8;";
-
-$mysqli->query($sql);
-
-
-function insert($mysqli, $name){
-    $sql = "INSERT INTO homeguard (pid, t_update, `data-name`, int32) VALUES (0, CURRENT_TIMESTAMP, '$name', 0);";
-    $mysqli->query($sql);
-}
-
-function update($mysqli, $name, $int32){
-    $sql = "UPDATE homeguard SET t_update=CURRENT_TIMESTAMP, int32=$int32 WHERE '$name'==`data-name`;";
-    $mysqli->query($sql);
-}
-
-$sql = "SELECT count(id) count FROM homeguard where `id`=1";
-$result = $mysqli->query($sql);
-$row = $result->fetch_assoc();
-if( $row["count"] == 0){
-    insert($mysqli, "卧室-客厅门卫士");
-    insert($mysqli, "卧室-客厅门卫士-公牛-Z4-插座");
-    insert($mysqli, "卧室-客厅门卫士-小夜灯");
-    insert($mysqli, "卧室-客厅门卫士-电脑桌-小吊扇");
-    insert($mysqli, "卧室-客厅门卫士-电脑桌-日光灯");
-    insert($mysqli, "卧室-客厅门卫士-红外人体感应");
-    insert($mysqli, "卧室-客厅门卫士-门框磁力感应");
-    insert($mysqli, "卧室-客厅门卫士-门框气温");
-}
-
-$sql = "SELECT id, `data-name`, int32 FROM homeguard";
-$result = $mysqli->query($sql);
-
-if ($result->num_rows > 0) {
-    // output data of each row
-    while($row = $result->fetch_assoc()) {
-        echo "id: " . $row["id"]. " - Name: " . $row["data-name"]. ", value= " . $row["int32"]. "<br>";
-    }
-} else {
-    echo "0 results";
-}
+require("homeguard.php");
+require_once("function.php");
 
 $action =   isset($_GET["action"] ) ? $_GET["action"]  :
             (isset($_POST["action"]) ? $_POST["action"] :
             "view");
 
 
-function fobbiden_password_needed(){
-?>
 
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-
-    <!--Import Google Icon Font-->
-    <!--<link rel="stylesheet" href="css/fonts-material-icons.css">-->
-    <link rel="stylesheet" href="http://fonts.googleapis.com/icon?family=Material+Icons">
-
-    <!--<link rel="stylesheet" href="css/materialize.min.css">-->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.7/css/materialize.min.css">
-
-
-
-    <!--Let browser know website is optimized for mobile-->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-
-    <style>
-        *{font-family: "Microsoft YaHei"}
-    </style>
-</head>
-
-<body style="background: #fcfcfc;">
-<!--Import jQuery before materialize.js-->
-<!--<script src="js/jquery-2.1.1.min.js"></script>-->
-<script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
-
-<!-- Compiled and minified JavaScript -->
-<!--<script src="js/materialize.min.js"></script>-->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.7/js/materialize.min.js"></script>
-
-<header>
-    <div class="contain">
-        <nav>
-            <div class="nav-wrapper cyan lighten-1">
-                <a href="#" class="brand-logo center"><i class="material-icons left">cloud</i>雪星 - 家园卫士<i class="material-icons right">cloud</i></a>
-            </div>
-        </nav>
-    </div>
-</header>
-<div class="container" style="">
-    <div class="card cyan darken-4">
-        <nav>
-            <div class="nav-wrapper red">
-                <a href="#" class="brand-logo center">请输入<?=isset($_REQUEST["key"])?"正确的":""?>访问密码</a>
-            </div>
-        </nav>
-
-        <div class="card-content white">
-            <form action="./" method="post">
-                <div class="row">
-                        <input type="password" name="key">
-                        <input type="submit" class="btn right">
-                </div>
-            </form>
-        </div>
-    </div>
-</body>
-</html>
-
-<?php
-}
 
 switch($action){
     case "sync":
@@ -139,7 +27,7 @@ switch($action){
     case "post":
         $key = isset($_REQUEST["key"]) ? $_REQUEST["key"]: "";
         if(!($key === "L6fQt3z7LhCwIBWMBFIB5TTR5znL1VTq")){
-            fobbiden_password_needed();
+            forbidden_password_needed();
             exit;
         };
 
@@ -161,7 +49,7 @@ switch($action){
     case "view":
         $key = isset($_REQUEST["key"]) ? $_REQUEST["key"] : "";
         if(!($key === "L6fQt3z7LhCwIBWMBFIB5TTR5znL1VTq")){
-            fobbiden_password_needed();
+            forbidden_password_needed();
             exit;
         };
 

@@ -21,8 +21,37 @@
 SoftwareSerial mySerial(3, 2); /* RX:D3, TX:D2 */
 ESP8266 wifi(mySerial);
 
+// 74HC595
+
+void inline C74HC595_OUTPUT(uint8_t value){
+    digitalWrite(ST_CP, LOW);
+    shiftOut(DS, SH_CP, MSBFIRST, ~value);
+    digitalWrite(ST_CP, HIGH);
+}
+
+void inline C74HC595_setup(){
+    pinMode(ST_CP, OUTPUT); // 74HC595
+    pinMode(SH_CP, OUTPUT); // 74HC595
+    pinMode(DS, OUTPUT); // 74HC595
+}
 // SYNC DATA BEGIN
-uint8_t states;
+uint8_t relays_states = 0;
+uint8_t relays_states_setuped = 0;
+void inline relays_states_load(){
+    relays_states = EEPROM.read(0);
+}
+void inline relays_states_save(){
+    EEPROM.write(0, relays_states);
+}
+void inline relays_states_update(){
+    C74HC595_OUTPUT(~relays_states);
+}
+void inline relays_states_setup(){
+    pinMode(A0, OUTPUT); // A0 = 继电器开关
+    relays_states_load();
+    relays_states_update();
+    digitalWrite(A0, HIGH);
+}
 
 // SYNC DATA END
 
@@ -35,18 +64,17 @@ uint8_t sync_to_server(){
         DEBUG("FAIL\n");
     }
 
-    states=1;
-
     char buffer[128] = "";
+    char numbuf[12];
     strcat(buffer, "GET ");
     strcat(buffer, PATH_1);
     strcat(buffer, "?action=sync");
     strcat(buffer, "&version=2016-08-01");
     strcat(buffer, "&data_states=");
-    char numbuf[12];
-    itoa(states, numbuf, 10)
-    strcat(buffer, numbuf);
-    strcat(buffer, "&data_states=");
+    strcat(buffer, itoa(relays_states, numbuf, 10));
+    strcat(buffer, "&data_temperature=");
+    strcat(buffer, itoa(digitalRead(A1), numbuf, 10));
+    strcat(buffer, "&data_infrared=");
     
     strcat(buffer, " HTTP/1.1\n");
 
@@ -121,29 +149,17 @@ uint8_t sync_to_server(){
 
 void setup(void)
 {
+    C74HC595_setup();
+    relays_states_setup();
 
-    pinMode(ST_CP, OUTPUT); // 74HC595
-    pinMode(SH_CP, OUTPUT); // 74HC595
-    pinMode(DS, OUTPUT); // 74HC595
     pinMode(13, OUTPUT); // LED指示灯
     pinMode(11, INPUT);  // 重置按钮
     pinMode(10, INPUT);  // 传感器
     pinMode(A0, OUTPUT); // A0 = 继电器开关
-    pinMode(A7, OUTPUT); // RST, 重启
-
-    // 继电器状态
-
-    states = EEPROM.read(0);
-    digitalWrite(ST_CP, LOW);
-    shiftOut(DS, SH_CP, MSBFIRST, ~states);
-    digitalWrite(ST_CP, HIGH);
-
-    digitalWrite(A0, HIGH);
-
+    pinMode(A1, INPUT); // A1 温度传感数据
 
     Serial.begin(9600);
 
-    digitalWrite(A7, HIGH);
 
     if(!WiFi_Setup()){
 
@@ -167,9 +183,9 @@ void loop(void)
 
     //     // 继电器状态
 
-    //     states = EEPROM.read(0);
+    //     relays_states = EEPROM.read(0);
     //     digitalWrite(ST_CP, LOW);
-    //     shiftOut(DS, SH_CP, MSBFIRST, ~states);
+    //     shiftOut(DS, SH_CP, MSBFIRST, ~relays_states);
     //     digitalWrite(ST_CP, HIGH);
 
     //     //digitalWrite(A0, HIGH);
@@ -180,7 +196,7 @@ void loop(void)
     digitalWrite(13, LOW);
     /*
     if( WiFi_Recive() ){
-        DEBUG("states=");
-        DEBUGln(states);
+        DEBUG("relays_states=");
+        DEBUGln(relays_states);
     }*/
 }
