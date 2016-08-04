@@ -43,8 +43,8 @@ void inline C74HC595_setup(){
 // SYNC DATA BEGIN
 
 struct SyncData{
-  uint64_t data;
-  uint64_t time;
+  uint32_t data;
+  uint32_t time;
 };
 uint relaysAddress = 0
 SyncData relays;
@@ -66,6 +66,18 @@ void inline relays_states_setup(){
 
 // SYNC DATA END
 
+inline char* packing_int32(int32_t n, char* buf)
+{
+    sprintf(buf, "%04X%04X", *((int*)(&n) + 1), *((int*)(&n) + 0) );
+    return buf;
+}
+
+inline int32_t int32Packing(char* buf)
+{
+    int32_t n;
+    sscanf(buf, "%04X%04X", &n);
+    return buf;
+}
 uint8_t sync_to_server(){
     uint8_t mux_id = 0;
     DEBUG("Create TCP:");
@@ -76,19 +88,19 @@ uint8_t sync_to_server(){
     }
 
     char buffer[128] = "";
-    char numbuf[12];
+    char numbuf[8];
     strcat(buffer, "GET ");
     strcat(buffer, PATH_1);
     strcat(buffer, "?action=sync");
     strcat(buffer, "&version=2016-08-01");
     strcat(buffer, "&data_relays_data=");
-    strcat(buffer, itoa(relays.data, numbuf, 10));
+    strcat(buffer, itoa(relays.data, numbuf, 16));
     strcat(buffer, "&data_relays_data=");
-    strcat(buffer, itoa(relays.time, numbuf, 10));
+    strcat(buffer, itoa(relays.time, numbuf, 16));
     strcat(buffer, "&data_temperature=");
-    strcat(buffer, itoa(digitalRead(SENSOR_TEMPERATURE), numbuf, 10));
+    strcat(buffer, itoa(digitalRead(SENSOR_TEMPERATURE), numbuf, 16));
     strcat(buffer, "&data_infrared=");
-    strcat(buffer, itoa(digitalRead(SENSOR_INFRARED), numbuf, 10));
+    strcat(buffer, itoa(digitalRead(SENSOR_INFRARED), numbuf, 16));
     
     strcat(buffer, " HTTP/1.1\n");
 
