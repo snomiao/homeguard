@@ -7,6 +7,12 @@
 #define ST_CP 7
 #define SH_CP 8
 #define DS 12
+#define RELAYS A0
+#define BTN_RESET_RELAYS 11
+#define SENSOR_TEMPERATURE A1
+#define SENSOR_INFRARED 10
+#define LED 13
+
 
 #define DEBUG Serial.print
 #define DEBUGln Serial.println
@@ -35,22 +41,27 @@ void inline C74HC595_setup(){
     pinMode(DS, OUTPUT); // 74HC595
 }
 // SYNC DATA BEGIN
-uint8_t relays_states = 0;
-uint8_t relays_states_setuped = 0;
+
+struct SyncData{
+  uint64_t data;
+  uint64_t time;
+};
+uint relaysAddress = 0
+SyncData relays;
 void inline relays_states_load(){
-    relays_states = EEPROM.read(0);
+    EEPROM.get(relaysAddress, relays);
 }
 void inline relays_states_save(){
-    EEPROM.write(0, relays_states);
+    EEPROM.put(relaysAddress, relays);
 }
 void inline relays_states_update(){
-    C74HC595_OUTPUT(~relays_states);
+    C74HC595_OUTPUT(~relays.data);
 }
 void inline relays_states_setup(){
-    pinMode(A0, OUTPUT); // A0 = 继电器开关
+    pinMode(RELAYS, OUTPUT); // RELAYS = 继电器开关
     relays_states_load();
     relays_states_update();
-    digitalWrite(A0, HIGH);
+    digitalWrite(RELAYS, HIGH);
 }
 
 // SYNC DATA END
@@ -70,11 +81,14 @@ uint8_t sync_to_server(){
     strcat(buffer, PATH_1);
     strcat(buffer, "?action=sync");
     strcat(buffer, "&version=2016-08-01");
-    strcat(buffer, "&data_states=");
-    strcat(buffer, itoa(relays_states, numbuf, 10));
+    strcat(buffer, "&data_relays_data=");
+    strcat(buffer, itoa(relays.data, numbuf, 10));
+    strcat(buffer, "&data_relays_data=");
+    strcat(buffer, itoa(relays.time, numbuf, 10));
     strcat(buffer, "&data_temperature=");
-    strcat(buffer, itoa(digitalRead(A1), numbuf, 10));
+    strcat(buffer, itoa(digitalRead(SENSOR_TEMPERATURE), numbuf, 10));
     strcat(buffer, "&data_infrared=");
+    strcat(buffer, itoa(digitalRead(SENSOR_INFRARED), numbuf, 10));
     
     strcat(buffer, " HTTP/1.1\n");
 
@@ -101,6 +115,8 @@ uint8_t sync_to_server(){
     }
     DEBUG("\n]]\n");
     
+    //uint32_t data = atoi()
+
     char *p;
     p = strstr(buffer, "\n\n");
     if(p){
@@ -152,20 +168,21 @@ void setup(void)
     C74HC595_setup();
     relays_states_setup();
 
-    pinMode(13, OUTPUT); // LED指示灯
-    pinMode(11, INPUT);  // 重置按钮
-    pinMode(10, INPUT);  // 传感器
-    pinMode(A0, OUTPUT); // A0 = 继电器开关
-    pinMode(A1, INPUT); // A1 温度传感数据
+    pinMode(LED, OUTPUT); // LED指示灯
+    pinMode(BTN_RESET_RELAYS, INPUT);  // 重置按钮
+    pinMode(RELAYS, OUTPUT); // RELAYS = 继电器开关
+
+    pinMode(SENSOR_INFRARED, INPUT);  // 传感器
+    pinMode(SENSOR_TEMPERATURE, INPUT); // A1 温度传感数据
 
     Serial.begin(9600);
 
 
     if(!WiFi_Setup()){
 
-        digitalWrite(13, HIGH);
+        digitalWrite(LED, HIGH);
         delay(100);
-        digitalWrite(13, LOW);
+        digitalWrite(LED, LOW);
         delay(100);
 
         digitalWrite(A7, LOW);
@@ -178,7 +195,7 @@ void loop(void)
     sync_to_server();
 
 
-    // if(digitalRead(11)){
+    // if(digitalRead(BTN_RESET_RELAYS)){
     //     EEPROM.write(0, 0);
 
     //     // 继电器状态
@@ -188,12 +205,12 @@ void loop(void)
     //     shiftOut(DS, SH_CP, MSBFIRST, ~relays_states);
     //     digitalWrite(ST_CP, HIGH);
 
-    //     //digitalWrite(A0, HIGH);
+    //     //digitalWrite(RELAYS, HIGH);
     // }
 
-    digitalWrite(13, HIGH);
+    digitalWrite(LED, HIGH);
     delay(20);
-    digitalWrite(13, LOW);
+    digitalWrite(LED, LOW);
     /*
     if( WiFi_Recive() ){
         DEBUG("relays_states=");

@@ -8,15 +8,12 @@ $action =   isset($_GET["action"] ) ? $_GET["action"]  :
             (isset($_POST["action"]) ? $_POST["action"] :
             "view");
 
-
-
-
 switch($action){
     case "sync":
         switch($version){
             case "2016-08-01":
                 $states = isset($数据["data_states"]) ? $数据["data_states"] : 0;
-                $states >
+                print($states);
                 break;
             default:
                 break;
