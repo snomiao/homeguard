@@ -1,0 +1,16 @@
+{
+    "remotePath": "/home/wwwroot/blog.snowstarcyan.com/homeguard/",
+    "host": "104.194.78.73",
+    "username": "root",
+    "password": "KB9bJQo6Mu4F",
+    "port": 27729,
+    "protocol": "sftp",
+    "uploadOnSave": true,
+    "passive": false,
+    "debug": false,
+    "privateKeyPath": null,
+    "ignore": [
+        "\\.vscode",
+        "\\.git"
+    ]
+}

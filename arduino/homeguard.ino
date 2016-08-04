@@ -66,18 +66,19 @@ void inline relays_states_setup(){
 
 // SYNC DATA END
 
-inline char* packing_int32(int32_t n, char* buf)
+inline char* int32_to_hex(int32_t n, char* buf8byte)
 {
-    sprintf(buf, "%04X%04X", *((int*)(&n) + 1), *((int*)(&n) + 0) );
-    return buf;
+    sprintf(buf8byte, "%04X%04X", *((int16_t*)(&n) + 1), *((int16_t*)(&n) + 0) );
+    return buf8byte;
 }
 
-inline int32_t int32Packing(char* buf)
+inline int32_t hex_to_int32(char* buf8byte)
 {
     int32_t n;
-    sscanf(buf, "%04X%04X", &n);
-    return buf;
+    sscanf(buf8byte, "%04X%04X", ((int16_t)&n) + 1, ((int16_t)&n) + 0);
+    return n;
 }
+
 uint8_t sync_to_server(){
     uint8_t mux_id = 0;
     DEBUG("Create TCP:");
