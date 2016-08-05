@@ -4,17 +4,17 @@
 #define SPOTNAME "054"
 #define PASSWORD "88647410"
 
-#define ST_CP 7
-#define SH_CP 8
-#define DS 12
-#define RELAYS A0
-#define BTN_RESET_RELAYS 11
-#define SENSOR_TEMPERATURE A1
-#define SENSOR_INFRARED 10
+#define ST_CP            ( 7)
+#define SH_CP            ( 8)
+#define DS               (12)
+#define RELAYS           (A0)
+#define BTN_RESET_RELAYS (11)
+#define SENSOR_TEMPERATURE (A1)
+#define SENSOR_INFRARED    (10)
 #define LED 13
 
 
-#define DEBUG Serial.print
+#define DEBUG   Serial.print
 #define DEBUGln Serial.println
 
 #define HOST_1 "192.168.1.254"
@@ -38,7 +38,7 @@ void inline C74HC595_OUTPUT(uint8_t value){
 void inline C74HC595_setup(){
     pinMode(ST_CP, OUTPUT); // 74HC595
     pinMode(SH_CP, OUTPUT); // 74HC595
-    pinMode(DS, OUTPUT); // 74HC595
+    pinMode(DS   , OUTPUT); // 74HC595
 }
 // SYNC DATA BEGIN
 
@@ -46,7 +46,7 @@ struct SyncData{
   uint32_t data;
   uint32_t time;
 };
-uint relaysAddress = 0
+uint32_t relaysAddress = 0;
 SyncData relays;
 void inline relays_states_load(){
     EEPROM.get(relaysAddress, relays);
@@ -95,14 +95,15 @@ uint8_t sync_to_server(){
     strcat(buffer, "?action=sync");
     strcat(buffer, "&version=2016-08-01");
     strcat(buffer, "&data_relays_data=");
-    strcat(buffer, itoa(relays.data, numbuf, 16));
+
+    strcat(buffer, int32_to_hex(relays.data, numbuf));
     strcat(buffer, "&data_relays_data=");
-    strcat(buffer, itoa(relays.time, numbuf, 16));
+    strcat(buffer, int32_to_hex(relays.time, numbuf));
     strcat(buffer, "&data_temperature=");
-    strcat(buffer, itoa(digitalRead(SENSOR_TEMPERATURE), numbuf, 16));
+    strcat(buffer, int32_to_hex(digitalRead(SENSOR_TEMPERATURE), numbuf));
     strcat(buffer, "&data_infrared=");
-    strcat(buffer, itoa(digitalRead(SENSOR_INFRARED), numbuf, 16));
-    
+    strcat(buffer, int32_to_hex(digitalRead(SENSOR_INFRARED), numbuf));
+
     strcat(buffer, " HTTP/1.1\n");
 
     strcat(buffer, "User-Agent: homeguard\n");
@@ -117,8 +118,6 @@ uint8_t sync_to_server(){
     wifi.send(mux_id, (const uint8_t*)buffer, len);
 
 
-
-
     DEBUG("Recving:\n");
     len = wifi.recv(mux_id, (uint8_t*)buffer, sizeof(buffer), 100);
 
@@ -127,7 +126,7 @@ uint8_t sync_to_server(){
         DEBUG((char)buffer[i]);
     }
     DEBUG("\n]]\n");
-    
+
     //uint32_t data = atoi()
 
     char *p;
@@ -148,34 +147,32 @@ uint8_t sync_to_server(){
     return 0;
 }
 
-
-
-// WIFI_SETUP : 
-    #define DEBUGOK(string, operation) \
-        DEBUG(string);                 \
-        if (operation) {               \
-            DEBUG("OK\n");             \
-        } else {                       \
-            DEBUG("FAIL\n");           \
-            return 0;                  \
-        }
-    uint8_t WiFi_Setup(){
-        DEBUG(  "Setup begin =================== ====\n");
-
-        DEBUG("FW Version:");
-        DEBUGln(wifi.getVersion().c_str());
-        DEBUGOK("To station + softap ----------- ", wifi.setOprToStationSoftAP());
-
-        DEBUGOK("Join AP ----------------------- ", wifi.joinAP(SPOTNAME, PASSWORD));
-        DEBUG(  "IP: "); DEBUGln(wifi.getLocalIP().c_str());    
-        DEBUGOK("Enable multiple --------------- ", wifi.enableMUX());
-        DEBUGOK("Start TCP Server (8090) ------- ", wifi.startTCPServer(8090));
-        DEBUGOK("Set TCP Timeout (10) seconds -- ", wifi.setTCPServerTimeout(10));
-
-        DEBUG(  "Setup end ===================== ====\n");
-        return 1;
+// WIFI_SETUP :
+#define DEBUGOK(string, operation) \
+    DEBUG(string);                 \
+    if (operation) {               \
+        DEBUG("OK\n");             \
+    } else {                       \
+        DEBUG("FAIL\n");           \
+        return 0;                  \
     }
+uint8_t WiFi_Setup(){
+    DEBUG(  "Setup begin =================== ====\n");
 
+    DEBUG("FW Version:");
+    DEBUGln(wifi.getVersion().c_str());
+    DEBUGOK("To station + softap ----------- ", wifi.setOprToStationSoftAP());
+
+    DEBUGOK("Join AP ----------------------- ", wifi.joinAP(SPOTNAME, PASSWORD));
+    DEBUG(  "IP: "); DEBUGln(wifi.getLocalIP().c_str());
+    DEBUGOK("Enable multiple --------------- ", wifi.enableMUX());
+    DEBUGOK("Start TCP Server (8090) ------- ", wifi.startTCPServer(8090));
+    DEBUGOK("Set TCP Timeout (10) seconds -- ", wifi.setTCPServerTimeout(10));
+
+    DEBUG(  "Setup end ===================== ====\n");
+    return 1;
+}
+// setup
 void setup(void)
 {
     C74HC595_setup();
@@ -202,7 +199,7 @@ void setup(void)
     }
 }
 
-
+// loop
 void loop(void)
 {
     sync_to_server();
