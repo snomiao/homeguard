@@ -11,8 +11,9 @@ void inline DEBUG_Setup(){
 
 
 // RHYTHM: //
-#define Rhythm_TSIZE (28) //4*7
 typedef unsigned long long int RhythmMark;
+//#define Rhythm_TSIZE (sizeof(RhythmMark) * 8)
+#define Rhythm_TSIZE (5)
 class Rhythm{
     private:
     enum RhythmStatus { Calm, Up, Down };
@@ -48,116 +49,35 @@ class Rhythm{
         for(int i=0; i<count; i++){ DEBUG(t[i]); DEBUG("; "); }; DEBUGln("");
 
         const int maxLenRhythm = sizeof(RhythmMark) * 8;
-        RhythmMark rhythmMark = 0;
+        RhythmMark rhythmMark = 1; //repersent newest signal
 
-
-        int lenRhythm = 0;
-        long int tSignal = 0;
-        for(int i = signalStep; i >= 0; i--){
-            tSignal  += t[i];
-            lenRhythm = tSignal / interval;
-
-            if(lenRhythm <= maxLenRhythm){
-                rhythmMark |= ((RhythmMark)1) << lenRhythm;
+        int i = signalStep;
+        while(1){
+            // for loop
+            i--;
+            if(i < 0){
+                i = signalCount - 1;
             }
-            else{
-                goto stop;
+            if(i == signalStep){
+                break;
             }
-        }
-        for(int i = signalCount; i > signalStep; i--){
-            tSignal  += t[i];
-            lenRhythm = tSignal / interval;
 
-            if(lenRhythm <= maxLenRhythm){
-                rhythmMark |= ((RhythmMark)1) << lenRhythm;
+            // calc rhythm length, and mark down
+            if(t[i] < interval){
+                rhythmMark = rhythmMark << 1 | 1;
             }
-            else{
-                goto stop;
+            else if(t[i] < 2 * interval){
+                rhythmMark = rhythmMark << 2 | 1;
+            }else{
+                break;
             }
         }
 
-
-        //rhythmMark
-        stop:
-        DEBUG("tSignal"); DEBUGln(tSignal);
-        DEBUG("lenRhythm"); DEBUGln(lenRhythm);
-        
+        // show rhythm Mark
         for(int i=0; i < maxLenRhythm; i++){
             DEBUG( (int)((rhythmMark >> i) & 1) ? "X" : "_");
         }
         DEBUGln("");
-
-        // //
-        // const int maxLenRhythm = sizeof(RhythmMark) * 8;
-        // DEBUG("/count:"); DEBUG(count);
-        // DEBUG("/index:"); DEBUG(index);
-        // DEBUG("/maxLenRhythm:"); DEBUG(maxLenRhythm);
-        // DEBUGln("");
-        // // find a index that close enough to calc
-        // int lenRhythm;
-        // int indexShiftLeftMost;
-
-
-
-        // for(int i=0; i<count; i++){ DEBUG(t[i]); DEBUG("; "); }; DEBUGln("");
-
-
-
-        // for(int i=index+1; i<count; i++){
-        //     lenRhythm = ((t[index] - t[i]) / interval) + 1;
-        //     if(lenRhythm <= maxLenRhythm){
-        //         indexShiftLeftMost = i;
-        //         goto shift;
-        //     }
-        // }
-        // for(int i=0; i<index; i++){
-        //     lenRhythm = ((t[index] - t[i]) / interval) + 1;
-        //     if(lenRhythm <= maxLenRhythm){
-        //         indexShiftLeftMost = i;
-        //         goto shift;
-        //     }
-        // }
-
-        
-
-
-
-
-
-
-
-        // // shift list as to sorted
-        // shift:
-        // shiftToLeftMost(t, count, indexShiftLeftMost);
-        // index -= indexShiftLeftMost;
-        
-
-        // for(int i=0; i<count; i++){ DEBUG(t[i]); DEBUG("; "); }; DEBUGln("");
-
-        // DEBUGln("=====================================================");
-        // // mark down rhythm
-        // RhythmMark rhythmMark = 0;
-
-        // for(int i=0; i < index; i++){
-        //     int rhythm = (t[index] - t[i]) / interval;
-        //     rhythmMark |= 1 << rhythm;
-        // }
-        // //rhythmMark
-
-        // //just for debug
-        // for(int i=0; i < maxLenRhythm; i++){
-        //     if((int)((rhythmMark >> i) & 1)){
-        //         DEBUG("X");
-        //     }else{
-        //         DEBUG("_");
-        //     }
-        // }
-        // DEBUG(":");
-        // //DEBUG((long int)(rhythmMark >> 32 & 0xFFFFFFFF));
-        // //DEBUG(",");
-        // DEBUG((unsigned long int)(rhythmMark & 0xFFFFFFFF));
-        // DEBUGln("");
-
     }
 
 
@@ -198,14 +118,13 @@ class Rhythm{
         //
         switch(s){
             case RhythmStatus::Calm:
-            //DEBUGln("//////////////////////////Calm");
+            DEBUGln("/////////////////////////////////////////// Calm");
             break;
             case RhythmStatus::Up:
-            //DEBUGln("//////////////////////////Up");
+            DEBUGln("////////////////////////// Up");
             break;
             case RhythmStatus::Down:
-
-            //DEBUGln("////////////// Down: ");
+            DEBUGln("////////////////////////// Down: ");
             Signal();
 
             break;
