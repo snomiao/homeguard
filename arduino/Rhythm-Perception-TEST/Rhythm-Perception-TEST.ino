@@ -14,97 +14,105 @@ void inline DEBUG_Setup(){
 typedef unsigned long long int RhythmMark;
 //#define Rhythm_TSIZE (sizeof(RhythmMark) * 8)
 #define Rhythm_TSIZE (5)
+#define RhythmMarkMaxLen (sizeof(RhythmMark)*8)
 class Rhythm{
     private:
+
+
     enum RhythmStatus { Calm, Up, Down };
-    
-    //
     int lastData = 0;
+
+    //
+    
     
     //long int t_up[Rhythm_TSIZE] = {0}; 
-    long int t_signal[Rhythm_TSIZE] = {0}; 
-    long int t_lastSignal = 0;
-    int signalStep = 0;
-    int signalCount = 0;
-    
-    // reverse a list
-    void reverse(long int *t, int a, int b){
-        for(int s = a, e = b - 1; s < e; s++, e--){
-            long int tmp = t[s];
-            t[s] = t[e];
-            t[e] = tmp;
+    // long int t_signal[Rhythm_TSIZE] = {0}; 
+    // long int t_lastSignal = 0;
+    // int signalStep = 0;
+    // int signalCount = 0;
+    RhythmMark rhym = 1;
+
+
+
+
+    void matchAction(){
+        // TODO
+        //rhym == 
+        //rhym &
+        switch(rhym){
+
+            case 7645: // XXX_XXX_XXX_X
+            DEBUGln("ACTION! ONE!");
+            rhym = 0;
+            break;
+            
+            case 173: // X_X_XX_X
+            DEBUGln("ACTION! TWO!");
+            rhym = 0;
+            break;
+
+            default:
+            //none
+
+            break;
         }
     }
-    
-    // shift array to leftmost
-    void shiftToLeftMost(long int *t, int count, int index){
-        reverse(t, 0, index);
-        reverse(t, index, count);
-        reverse(t, 0, count);
-    }
 
-    void calcRhythm(){
-        long int*t = t_signal;
-        int count = signalCount;
-        for(int i=0; i<count; i++){ DEBUG(t[i]); DEBUG("; "); }; DEBUGln("");
+    int rhymAt = 0;
+    long int tLastDown = 0;
+    long int tLastUp   = 0;
+    void up(){
+        long int t = millis();
+        int diff = t - tLastDown;
+        tLastDown = t;
 
-        const int maxLenRhythm = sizeof(RhythmMark) * 8;
-        RhythmMark rhythmMark = 1; //repersent newest signal
-
-        int i = signalStep;
-        while(1){
-            // for loop
-            i--;
-            if(i < 0){
-                i = signalCount - 1;
-            }
-            if(i == signalStep){
-                break;
-            }
-
-            // calc rhythm length, and mark down
-            if(t[i] < interval){
-                rhythmMark = rhythmMark << 1 | 1;
-            }
-            else if(t[i] < 2 * interval){
-                rhythmMark = rhythmMark << 2 | 1;
-            }else{
-                break;
-            }
+        int rhymShift = diff / interval + 1;
+        //if(rhymShift < RhythmMarkMaxLen){
+            if(rhymShift <= 4){
+                if(rhymAt == 2){
+                    rhym = rhym << rhymShift | 1;
+            } //dn
         }
+        else{
+            rhym = 1;
+            rhymAt = 2; //dn
+        }
+    }
+    void dn(){
 
+        long int t = millis();
+        int diff = t - tLastDown;
+        tLastDown = t;
+
+        int rhymShift = diff / interval + 1;
+        // if(rhymShift < RhythmMarkMaxLen)
+        if(rhymShift <= 4){
+            if(rhymAt == 1){
+                rhym = rhym << rhymShift | 1;
+            } //dn
+        }
+        else{
+            rhym = 1;
+            rhymAt = 1; //dn
+        }
+    }
+    void clam(){
         // show rhythm Mark
-        for(int i=0; i < maxLenRhythm; i++){
-            DEBUG( (int)((rhythmMark >> i) & 1) ? "X" : "_");
+        for(int i = sizeof(rhym) * 8 - 1; i >= 0; i--){
+            // 从大端读起
+            DEBUG( (int)((rhym >> i) & 1) ? "X" : "_");
         }
-        DEBUGln("");
+        DEBUG("//");
+        DEBUG( (unsigned long int)( (rhym >> 32) & 0xFFFFFFFF) );
+        DEBUG(",");
+        DEBUG( (unsigned long int)( (rhym      ) & 0xFFFFFFFF) );
+        DEBUG("// rhymAt:");
+        DEBUG( rhymAt);
+        DEBUGln();
+
+        matchAction();
     }
 
-
-    void Signal(){
-        // DEBUG("////////////// Signal: ");
-        // DEBUGln(" ");
-
-        
-        long int now = millis();
-        long int diff = now - t_lastSignal;
-
-        t_lastSignal = now;
-
-        // filter
-        if( diff < interval / 2){
-            return;
-        }
-
-        t_signal[signalStep] = diff;
-
-        if(signalCount < Rhythm_TSIZE)
-        signalCount++;
-        signalStep++;
-        signalStep %= Rhythm_TSIZE;
-
-        calcRhythm();
-    }
 
     //int32_t speedtime
     RhythmStatus lastStatus;
@@ -115,18 +123,20 @@ class Rhythm{
             lastStatus = s;
             return;
         }
+
         //
         switch(s){
             case RhythmStatus::Calm:
             DEBUGln("/////////////////////////////////////////// Calm");
+            clam();
             break;
             case RhythmStatus::Up:
             DEBUGln("////////////////////////// Up");
+            up();
             break;
             case RhythmStatus::Down:
             DEBUGln("////////////////////////// Down: ");
-            Signal();
-
+            dn();
             break;
         }
         lastStatus = s;
@@ -151,8 +161,12 @@ class Rhythm{
         int diff = lastData - data;
         lastData = data;
 
-        // DEBUG("DIFF: ");
-        // DEBUGln(diff);
+
+        if(tdiff < interval / 8 ){
+            return;
+        }
+
+        //DEBUG("DATA: "); DEBUGln(data);
         if(diff > dataTolerance){
             //DEBUGln("RhythmStatus::Up");
             this->Event(RhythmStatus::Up);
@@ -164,23 +178,21 @@ class Rhythm{
         else if(tdiff >= tCalm){
             //DEBUGln("RhythmStatus::Calm");
             this->Event(RhythmStatus::Calm);
+            return;
         }
         else{
             return;
         }
         tLastPutData += tdiff;
     }
-    void getAction(){
-        // TODO
-    }
 };
 
 
 
 // MAIN: //
-Rhythm rhythm(250, 100, 60);
+Rhythm rhythm(250, 100, 80);
 
-#define MEANSIZE 3
+#define MEANSIZE 10
 int data[MEANSIZE] = {0};
 int k = 0;
 
@@ -195,16 +207,16 @@ void loop(){
     // PUT MEAN DATA
     int datanow = analogRead(A0);
 
-    data[k++] = datanow;
-    k %= MEANSIZE;
+    // data[k++] = datanow;
+    // k %= MEANSIZE;
 
-    long int datamean = 0;
-    for(int i=0; i<MEANSIZE; i++){
-        datamean += data[i];
-    }
-    datamean /= MEANSIZE;
+    // long int datamean = 0;
+    // for(int i=0; i<MEANSIZE; i++){
+    //     datamean += data[i];
+    // }
+    // datamean /= MEANSIZE;
 
-    rhythm.putData(datamean);
+    rhythm.putData(datanow);
     //
     
 }
