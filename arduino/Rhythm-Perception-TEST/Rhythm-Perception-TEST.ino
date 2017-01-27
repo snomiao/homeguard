@@ -215,7 +215,8 @@ void loop(){
     //     datamean += data[i];
     // }
     // datamean /= MEANSIZE;
-
+    //DEBUG("/");
+    //DEBUG(datanow);
     rhythm.putData(datanow);
     //
     
