@@ -192,10 +192,10 @@ class RhymSensor{
 };
 
 // MAIN
-int OUTPUT_rawdata = 1;
-int OUTPUT_dataFilted = 1;
-int OUTPUT_signal = 0;
-int OUTPUT_rhym = 0;
+int OUTPUT_rawdata = 0;
+int OUTPUT_dataFilted = 0;
+int OUTPUT_signal = 1;
+int OUTPUT_rhym = 1;
 
 FilterShake fs = FilterShake(80);
 FilterShiftMean fsm = FilterShiftMean();
