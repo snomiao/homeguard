@@ -210,64 +210,64 @@ void setup(){
 void loop(){
 
     //command control
-    switch (Serial.read()) {
-        case '1':
-        fs.N++;
-        DEBUG("=========================");
-        DEBUGln(fs.N);                                        break;
-        case '2':
-        fs.N--;
-        DEBUG("=========================");
-        DEBUGln(fs.N);                                        break;
-        case '3':
-        DEBUG("=========================");
-        //DEBUGln(lastData);                                    break;
-        case 'q':
-        OUTPUT_dataFilted = OUTPUT_dataFilted xor 1;          break;
-        case 'w':
-        OUTPUT_signal = OUTPUT_signal xor 1;                  break;
-        case 'e':
-        OUTPUT_rhym = OUTPUT_rhym xor 1;                  break;
-        case 'r':
-        OUTPUT_rawdata = OUTPUT_rawdata xor 1;                  break;
-    }
+    // switch (Serial.read()) {
+    //     case '1':
+    //     fs.N++;
+    //     DEBUG("=========================");
+    //     DEBUGln(fs.N);                                        break;
+    //     case '2':
+    //     fs.N--;
+    //     DEBUG("=========================");
+    //     DEBUGln(fs.N);                                        break;
+    //     case '3':
+    //     DEBUG("=========================");
+    //     //DEBUGln(lastData);                                    break;
+    //     case 'q':
+    //     OUTPUT_dataFilted = OUTPUT_dataFilted xor 1;          break;
+    //     case 'w':
+    //     OUTPUT_signal = OUTPUT_signal xor 1;                  break;
+    //     case 'e':
+    //     OUTPUT_rhym = OUTPUT_rhym xor 1;                  break;
+    //     case 'r':
+    //     OUTPUT_rawdata = OUTPUT_rawdata xor 1;                  break;
+    // }
 
 
     // PUT MEAN DATA
     int datanow = analogRead(A0);
     if( OUTPUT_rawdata){
-        DEBUG("datanow: ");
+        //DEBUG("datanow: ");
         DEBUG(datanow);
-        for(int i=0; i<datanow / 15; i++){
-            DEBUG("/");
+        for(int i=0; i<datanow; i++){
+            //DEBUG("/");
         }
         DEBUGln();
     }
-    // data
-    int dataFilted = fs.filter( fsm.filter(datanow) );
-    static int lastDataFilted = dataFilted;
-    if(OUTPUT_dataFilted && lastDataFilted!=dataFilted){
-        DEBUG("datanow"); DEBUGln(datanow);
-        DEBUG("dataFilted"); DEBUGln(dataFilted);
-        lastDataFilted = dataFilted;
-    }
+    // // data
+    // int dataFilted = fs.filter( fsm.filter(datanow) );
+    // static int lastDataFilted = dataFilted;
+    // if(OUTPUT_dataFilted && lastDataFilted!=dataFilted){
+    //     DEBUG("datanow"); DEBUGln(datanow);
+    //     DEBUG("dataFilted"); DEBUGln(dataFilted);
+    //     lastDataFilted = dataFilted;
+    // }
 
-    // signal
-    int signal = ss.signal(dataFilted);
-    if(OUTPUT_signal && signal != 0){
-        DEBUGln( signal > 0 ? "///////////" : "\\\\\\\\\\");
-    }
+    // // signal
+    // int signal = ss.signal(dataFilted);
+    // if(OUTPUT_signal && signal != 0){
+    //     DEBUGln( signal > 0 ? "///////////" : "\\\\\\\\\\");
+    // }
 
-    // rhym
-    unsigned long long int rhym = rs.rhym(signal);
-    static unsigned long long int lastrhym;
-    if(OUTPUT_rhym && rhym != lastrhym){
-        lastrhym = rhym;
-        // show rhythm Mark
-        for(int i = sizeof(rhym) * 8 - 1; i >= 0; i--){
-            // 从大端读起
-            DEBUG( (int)((rhym >> i) & 1) ? "X" : "_");
-        }
-        DEBUGln("");
-    }
+    // // rhym
+    // unsigned long long int rhym = rs.rhym(signal);
+    // static unsigned long long int lastrhym;
+    // if(OUTPUT_rhym && rhym != lastrhym){
+    //     lastrhym = rhym;
+    //     // show rhythm Mark
+    //     for(int i = sizeof(rhym) * 8 - 1; i >= 0; i--){
+    //         // 从大端读起
+    //         DEBUG( (int)((rhym >> i) & 1) ? "X" : "_");
+    //     }
+    //     DEBUGln("");
+    // }
 }
