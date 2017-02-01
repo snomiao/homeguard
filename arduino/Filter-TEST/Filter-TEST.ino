@@ -33,7 +33,7 @@ class FilterShake{
         if(value == new_value){
             i = 0;
             return value;
-        }
+        };
 
         // counting unequal value
         i++;
@@ -98,23 +98,27 @@ class SignalSensor{
 
         // calc diff
         static unsigned int value = new_value;
+        static unsigned int hitDiff = 6;
+        
         int diff = new_value - value;
         value += diff;
 
-        // ignore repeat value
-        if(diff == 0){
+        // 忽略变化缓慢的信号
+        if(diff / hitDiff == 0){
             return 0;
         }
+
+
         
         // calc signal
         int signal = diff > 0 ? 1 : -1;
-        static int last_signal = signal;
+        static int lastSignal = signal;
 
         // ignore repeat signal
-        if (last_signal == signal){
+        if (lastSignal == signal){
             return 0;
         }
-        last_signal = signal;
+        lastSignal = signal;
 
         // ok
         return signal;
@@ -125,82 +129,125 @@ class SignalSensor{
 };
 
 ////////////////////////////////
-// RhymSensor 节拍感受器
-// 
-// 输入一串信号，以 0 表示静默，其它数字为不同的有效信号。
-// 提取首个有效信号，作为节拍的开始，对后续同种信号计算节拍。
-// 实时输出节拍。
-// 如出现持续静默，则下次需重新提取首个有效信号，作为节拍的开始。
-// 现最长支持64个节拍
+// MorseCodeSensor 莫斯电码接收器
 //
-class RhymSensor{
-    public:
-    unsigned int interval;
-    RhymSensor(unsigned int pInterval){
-        interval    = pInterval;
-    }
+class MorseCodeSensor{
+    private:
+    typedef int SIGNAL;
 
-    unsigned long long int rhym(unsigned int signal){
-        static unsigned long long int rhym_section = 0; //64bit
+    char* MORSE = "%%ETIANMSURWDKGOHVF?LAPJBXCYZQ%%54%3% %2 %+ %%%16=/ % % 7 %%8 90            ?_    \"  .    @   '  -        ;! (     ,    :       ";
 
-        // pick first signal
-        static long int t_prev_valid_signal;
-        static unsigned int first_signal = 0;
-        if( first_signal == 0){
-            t_prev_valid_signal = millis();
-            first_signal  = signal;
-            rhym_section  = 1; // ___X
-            return rhym_section;
-        }
-
-        // no signal
-        if(signal == 0){
-            return 0;
-        }
-
-        // signal delta time
-        int diff = millis() - t_prev_valid_signal;
-        
-        // calc rhym shift
-        unsigned int rhym_shift = (diff + interval / 2) / interval;
-
-        // word interval
-        if(rhym_shift > 4){
-            t_prev_valid_signal = millis();
-            first_signal  = signal;
-            rhym_section  = 1; // ___X
-            return rhym_section;
-        }
-
-        // calc rhym
-        if( rhym_shift < sizeof(rhym_section) * 8 ){
-            
-            if(rhym_shift <= 4){ // sentence interval = 4 * interval
-                // calc rhym_section
-                if(signal == first_signal){
-                    DEBUG("diff: "); DEBUGln(diff);
-                    rhym_section = rhym_section << rhym_shift | 1; // _X_X
-
-                    t_prev_valid_signal += diff;
-                    return rhym_section;
-                }
-                //DEBUGln("SIGNAL WUGUAN");
-            }
+    char morseChar(long long int code){
+        if(code < 129){
+            char c = MORSE[code];
+            if(c != ' ')
+                return c;
         }
         return 0;
+    }
+
+    public:
+    int interval;  // 间隔
+    MorseCodeSensor(int interval){
+        this->interval = interval;
+    }
+    char signal(SIGNAL s) {
+
+        static long int      lastTime = 0;  // 前一个有效信号的时间戳
+        static SIGNAL        lastSignal;    // 前一个有效信号
+        static SIGNAL        signalUp = 1;   // 定义它为上升沿信号
+        static long long int morseCode = 1;  // 空信号
+        static int           allowSpace = 0;
+        
+        // 返回字符, 此处用 0 表示没有字符
+        char c = 0;
+        // 计算信号长度
+        long int diff = millis() - lastTime;
+        
+
+        // 如果一个状态保持了很久，那么可以认为这个有效信号是上升沿信号（打破了状态）
+        //
+        // ``\__________________________/`````\___
+        //                             (^)
+        //
+        // 
+        if(diff >= interval * 14){
+            signalUp = s;
+        };
+
+        // 处理 LOW 心跳信号，和上升沿信号, 输出字符
+        //
+        // ``````\___________/```````````
+        //      (^^^^^^^^^^^^)
+        //
+        if( (0 == s && lastSignal != signalUp) || s == signalUp ){
+            // 停顿 3 个 "." 之后，输出字符
+            if( diff >= interval * 3 ){
+                if( morseCode != 1 ){
+                    allowSpace = 1;
+                    
+                    c = morseChar(morseCode);
+                    morseCode = 1;
+                }
+            }
+            // 停顿 7 个 "." 之后，输出空格
+            if( diff >= interval * 7 ){
+                if( morseCode != 1 ){
+                    allowSpace = 1;
+                    
+                    c = morseChar(morseCode);
+                    morseCode = 1;
+
+                }else{
+                    if(allowSpace){
+                        allowSpace = false;
+                        
+                        c = '_';
+                        morseCode = 1;
+                    }
+                }
+            }
+        };
+
+        // 处理有效信号的时间戳
+        //
+        // `````\_____/`````\_____/`````\_____
+        //     (^)   (^)   (^)   (^)   (^) 
+        //
+        if(lastSignal == s || 0 == s){
+            return c;
+        };
+        lastSignal = s;
+        lastTime = lastTime - -diff;
+
+        // 处理下降沿信号（也就是放开按键）
+        //
+        // ``````\___________/```````````
+        //      (^)
+        //
+        if(signalUp != s){
+            morseCode <<= 1;
+            if( diff >= interval * 2 ){ /*取1和3的平均*/
+                morseCode |= 1; // -
+            }else{
+                morseCode |= 0; // .
+            }
+        }
+        return c;
     }
 };
 
 // MAIN
-int OUTPUT_rawdata = 0;
+int OUTPUT_rawdata    = 0;
 int OUTPUT_dataFilted = 0;
-int OUTPUT_signal = 1;
-int OUTPUT_rhym = 1;
+int OUTPUT_signal     = 0;
+int OUTPUT_morse      = 1;
 
-FilterShake fs = FilterShake(80);
+
+FilterShake     fs  = FilterShake(80);
 FilterShiftMean fsm = FilterShiftMean();
-SignalSensor ss = SignalSensor();
-RhymSensor rs = RhymSensor(250); // 1/4s
+SignalSensor    ss  = SignalSensor();
+MorseCodeSensor mcs = MorseCodeSensor(250); // 1/4s
 
 
 void setup(){
@@ -214,24 +261,23 @@ void loop(){
         case '1':
         fs.N++;
         DEBUG("=========================");
-        DEBUGln(fs.N);                                        break;
+        DEBUGln(fs.N);                                          break;
         case '2':
         fs.N--;
         DEBUG("=========================");
-        DEBUGln(fs.N);                                        break;
+        DEBUGln(fs.N);                                          break;
         case '3':
         DEBUG("=========================");
         //DEBUGln(lastData);                                    break;
         case 'q':
-        OUTPUT_dataFilted = OUTPUT_dataFilted xor 1;          break;
-        case 'w':
-        OUTPUT_signal = OUTPUT_signal xor 1;                  break;
-        case 'e':
-        OUTPUT_rhym = OUTPUT_rhym xor 1;                  break;
-        case 'r':
         OUTPUT_rawdata = OUTPUT_rawdata xor 1;                  break;
+        case 'w':
+        OUTPUT_dataFilted = OUTPUT_dataFilted xor 1;            break;
+        case 'e':
+        OUTPUT_signal = OUTPUT_signal xor 1;                    break;
+        case 't':
+        OUTPUT_morse = OUTPUT_morse xor 1;                      break;
     }
-
 
     // PUT MEAN DATA
     int datanow = analogRead(A0);
@@ -243,11 +289,11 @@ void loop(){
         }
         DEBUGln();
     }
+
     // data
     int dataFilted = fs.filter( fsm.filter(datanow) );
     static int lastDataFilted = dataFilted;
     if(OUTPUT_dataFilted && lastDataFilted!=dataFilted){
-        DEBUG("datanow"); DEBUGln(datanow);
         DEBUG("dataFilted"); DEBUGln(dataFilted);
         lastDataFilted = dataFilted;
     }
@@ -258,16 +304,21 @@ void loop(){
         DEBUGln( signal > 0 ? "///////////" : "\\\\\\\\\\");
     }
 
-    // rhym
-    unsigned long long int rhym = rs.rhym(signal);
-    static unsigned long long int lastrhym;
-    if(OUTPUT_rhym && rhym != lastrhym){
-        lastrhym = rhym;
+    // morse code
+    unsigned char morseChar = mcs.signal(signal);
+    static unsigned char lastMorseChar;
+    if(OUTPUT_morse && lastMorseChar != morseChar && morseChar != 0){
+        lastMorseChar = morseChar;
         // show rhythm Mark
-        for(int i = sizeof(rhym) * 8 - 1; i >= 0; i--){
-            // 从大端读起
-            DEBUG( (int)((rhym >> i) & 1) ? "X" : "_");
+        #define MORSEBUFLEN 32
+        static unsigned char c[MORSEBUFLEN] = "|||||||||||||||||||||||||||||||";
+        for(int i=0; i < MORSEBUFLEN - 2; i++){
+            c[i] = c[i+1];
         }
+        c[MORSEBUFLEN - 2] = morseChar;
+
+        DEBUG((const char*)c);
         DEBUGln("");
     }
 }
+ 
