@@ -129,22 +129,22 @@ HomeX
 // 整理：shenhaiyu 2013-11-01
 //
 class FilterShake{
+    private:
+    unsigned int value;
+    int k = 0;
     public:
     unsigned int N; // unequal value count
     unsigned int filter(unsigned int new_value){
-        static unsigned int value = new_value;
-        static int i = 0;
-
         // if it is not shaking
         if(value == new_value){
-            i = 0;
+            k = 0;
             return value;
         };
 
         // counting unequal value
-        i++;
-        if(i > N){
-            i = 0;
+        k++;
+        if(k > N){
+            k = 0;
             value = new_value;
         }
         return value;
@@ -158,7 +158,7 @@ class FilterShake{
 // FilterShiftMean 递推加权均值
 //
 class FilterShiftMean{
-    #define FilterShiftMean_N 12
+    #define FilterShiftMean_N 6
     private:
     int values[FilterShiftMean_N] = {0};
     public:
@@ -253,19 +253,18 @@ class MorseCodeSensor{
         return 0;
     }
 
+    long int      lastTime = 0;  // 前一个有效信号的时间戳
+    SIGNAL        lastSignal;    // 前一个有效信号
+    SIGNAL        signalUp = 1;   // 定义它为上升沿信号
+    long long int morseCode = 1;  // 空码
+    int           allowSpace = 0;
+
     public:
     int interval;  // 间隔
     MorseCodeSensor(int interval){
         this->interval = interval;
     }
     char signal(SIGNAL s) {
-
-        static long int      lastTime = 0;  // 前一个有效信号的时间戳
-        static SIGNAL        lastSignal;    // 前一个有效信号
-        static SIGNAL        signalUp = 1;   // 定义它为上升沿信号
-        static long long int morseCode = 1;  // 空码
-        static int           allowSpace = 0;
-        
         // 返回字符, 此处用 -1 表示没有字符
         char c = -1;
         // 计算信号长度
@@ -351,6 +350,7 @@ class C74HC595{
     int ST_CP;
     int SH_CP;
     int DS   ;
+    int lastData = 0;
     public:
     C74HC595(int pST_CP, int pSH_CP, int pDS){
         ST_CP = pST_CP;
@@ -362,8 +362,6 @@ class C74HC595{
         pinMode(DS   , OUTPUT);
     };
     void setData(int data){
-        static int lastData = 0;
-        
         if(data == lastData){
             return;
         }
@@ -379,9 +377,13 @@ class C74HC595{
 // 4路继电器
 class Relay4{
     private: 
+    //
     int data;
     int VCC;
     int interval;
+    //
+    long int tLastUpdate = 0;
+    int dataOut = 0;
     public:
     Relay4(int pVCC, int pInterval){
         interval = pInterval;
@@ -402,8 +404,8 @@ class Relay4{
         return data;
     }
     int getData(){
-        static long int tLastUpdate = 0;
-        static int dataOut = 0;
+        
+        
         // 一次只改变一个位，防止电流剧变导致跳闸
 
         // 计算 2次跳动的时间差
@@ -477,6 +479,13 @@ class CommandParser{
     int match(const char* cmd){
         int lenCmd = strlen(cmd);
         return !strcmp(cmd, (const char*)(buf + len - lenCmd - 1 ));
+    }
+    void clear(){
+        for(int i = 0; i < len - 1; i++){
+            buf[i] = 0;
+        }
+        needRematch = 0;
+        return;
     }
     int needMatch(){
         if(needRematch){
@@ -619,7 +628,7 @@ CommandParser cmd = CommandParser(80/*lenbuf*/);
 const int       morseInPin    = A0;
 FilterShake     morseInFs     = FilterShake(80);
 FilterShiftMean morseInFsm    = FilterShiftMean();
-SignalSensor    morseInSs     = SignalSensor(3/*触发阈值*/);
+SignalSensor    morseInSs     = SignalSensor(2/*触发阈值*/);
 MorseCodeSensor morseInSensor = MorseCodeSensor(125); // 1/8s
 
 void morseIn(){
@@ -677,27 +686,27 @@ C74HC595 c595 = C74HC595(7/*ST_CP*/, 8/*SH_CP*/, 12/*DS*/);
 
 void handleCommand(){
     if(cmd.needMatch()){
-        if(cmd.match("PING")){DEBUGln("PING");}
-        else if(cmd.match("/INFRARED TRIG")){DEBUGln("HUMAN!!!!!!!!!!!!!!!!");}
-        else if(cmd.match("/s rawdata"   )) { OUTPUT_rawdata    = !OUTPUT_rawdata;    }
-        else if(cmd.match("/s dataFilted")) { OUTPUT_dataFilted = !OUTPUT_dataFilted; }
-        else if(cmd.match("/s signal"    )) { OUTPUT_signal     = !OUTPUT_signal;     }
-        else if(cmd.match("/s morse"     )) { OUTPUT_morse      = !OUTPUT_morse;      }
+        if(cmd.match("PING")){cmd.clear(); DEBUGln("PING");}
+        else if(cmd.match("/INFRARED TRIG")){cmd.clear(); DEBUGln("HUMAN!!!!!!!!!!!!!!!!");}
+        else if(cmd.match("/s rawdata"   )) {cmd.clear(); OUTPUT_rawdata    = !OUTPUT_rawdata;    }
+        else if(cmd.match("/s dataFilted")) {cmd.clear(); OUTPUT_dataFilted = !OUTPUT_dataFilted; }
+        else if(cmd.match("/s signal"    )) {cmd.clear(); OUTPUT_signal     = !OUTPUT_signal;     }
+        else if(cmd.match("/s morse"     )) {cmd.clear(); OUTPUT_morse      = !OUTPUT_morse;      }
 
-        else if(cmd.match("/s q")) { OUTPUT_rawdata    = !OUTPUT_rawdata;    }
-        else if(cmd.match("/s w")) { OUTPUT_dataFilted = !OUTPUT_dataFilted; }
-        else if(cmd.match("/s e")) { OUTPUT_signal     = !OUTPUT_signal;     }
-        else if(cmd.match("/s r")) { OUTPUT_morse      = !OUTPUT_morse;      }
+        else if(cmd.match("/s q")) {cmd.clear(); OUTPUT_rawdata    = !OUTPUT_rawdata;    }
+        else if(cmd.match("/s w")) {cmd.clear(); OUTPUT_dataFilted = !OUTPUT_dataFilted; }
+        else if(cmd.match("/s e")) {cmd.clear(); OUTPUT_signal     = !OUTPUT_signal;     }
+        else if(cmd.match("/s r")) {cmd.clear(); OUTPUT_morse      = !OUTPUT_morse;      }
 
-        else if(cmd.match("S1")) { relay.xorData(1); }
-        else if(cmd.match("S2")) { relay.xorData(2); }
-        else if(cmd.match("S3")) { relay.xorData(4); }
-        else if(cmd.match("S4")) { relay.xorData(8); }
+        else if(cmd.match("S1")) { cmd.clear(); relay.xorData(1); }
+        else if(cmd.match("S2")) { cmd.clear(); relay.xorData(2); }
+        else if(cmd.match("S3")) { cmd.clear(); relay.xorData(4); }
+        else if(cmd.match("S4")) { cmd.clear(); relay.xorData(8); }
 
-        else if(cmd.match("IE")) { relay.xorData(1); }
-        else if(cmd.match("II")) { relay.xorData(2); }
-        else if(cmd.match("IS")) { relay.xorData(4); }
-        else if(cmd.match("IH")) { relay.xorData(8); }
+        else if(cmd.match("IE")) { cmd.clear(); relay.xorData(1); }
+        else if(cmd.match("II")) { cmd.clear(); relay.xorData(2); }
+        else if(cmd.match("IS")) { cmd.clear(); relay.xorData(4); }
+        else if(cmd.match("IH")) { cmd.clear(); relay.xorData(8); }
         //else if(cmd.match("SOS ")) { beeper.beep(200) }
     }
 }
